@@ -1,4 +1,4 @@
-name: Build Lively Portable
+name: Build Full Lively
 
 on:
   workflow_dispatch:
@@ -16,25 +16,30 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 9.0.x
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
 
-    - name: Publish Lively
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v2
+
+    - name: Restore
+      run: nuget restore src/Lively/Lively.sln
+
+    - name: Build full solution
+      run: msbuild src/Lively/Lively.sln /p:Configuration=Release /p:Platform=x64 /m
+
+    # ✅ Копируем ВСЮ папку net9 Release
+    - name: Copy Release Output
       run: |
-        dotnet publish src/Lively/Lively/Lively.csproj `
-          -c Release `
-          -r win-x64 `
-          --self-contained true `
-          -p:PublishSingleFile=false `
-          -o publish
+        mkdir publish
+        xcopy src\Lively\Lively\bin\x64\Release\net9.0-windows* publish\ /E /I /Y
 
+    # ✅ Удаляем debug мусор
     - name: Remove debug symbols
       run: |
-        del publish\*.pdb -ErrorAction SilentlyContinue
+        del publish\*.pdb /S /Q
 
-    - name: Upload Portable Build
+    - name: Upload full portable build
       uses: actions/upload-artifact@v4
       with:
         name: Lively-Portable
