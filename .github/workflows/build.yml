@@ -1,4 +1,4 @@
-name: Build Full Lively Portable
+name: Build Official Lively Portable
 
 on:
   workflow_dispatch:
@@ -22,26 +22,17 @@ jobs:
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v2
 
-    - name: Restore NuGet packages
+    - name: Restore
       run: nuget restore src/Lively/Lively.sln
 
-    - name: Build full solution
-      run: msbuild src/Lively/Lively.sln /p:Configuration=Release /p:Platform=x64 /m
-
-    - name: Copy Release Output
-      shell: pwsh
+    - name: Publish Solution
       run: |
-        $source = Get-ChildItem "src/Lively/Lively/bin/x64/Release" -Directory |
-                  Where-Object { $_.Name -like "net*-windows*" } |
-                  Select-Object -First 1
-
-        if (-not $source) {
-          Write-Error "Release folder not found!"
-          exit 1
-        }
-
-        New-Item -ItemType Directory -Path publish -Force
-        Copy-Item "$($source.FullName)\*" publish -Recurse -Force
+        msbuild src/Lively/Lively.sln `
+          /t:Publish `
+          /p:Configuration=Release `
+          /p:Platform=x64 `
+          /p:PublishDir=publish\ `
+          /m
 
     - name: Remove debug symbols
       shell: pwsh
