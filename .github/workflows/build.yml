@@ -1,4 +1,4 @@
-name: Build Lively EXE
+name: Build Lively Portable
 
 on:
   workflow_dispatch:
@@ -16,38 +16,26 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
 
-    - name: Setup NuGet
-      uses: NuGet/setup-nuget@v2
-
-    - name: Restore NuGet packages
-      run: nuget restore src/Lively/Lively.sln
-
-    - name: Build Solution
-      run: msbuild src/Lively/Lively.sln /p:Configuration=Release /p:Platform=x64 /m
-
-    # 🔎 Найти exe автоматически
-    - name: Find EXE
-      id: find_exe
-      shell: pwsh
+    - name: Publish Lively
       run: |
-        $exe = Get-ChildItem -Recurse -Filter *.exe | 
-               Where-Object { $_.FullName -match "Release" } |
-               Select-Object -First 1
+        dotnet publish src/Lively/Lively/Lively.csproj `
+          -c Release `
+          -r win-x64 `
+          --self-contained true `
+          -p:PublishSingleFile=false `
+          -o publish
 
-        if (-not $exe) {
-          Write-Error "EXE not found!"
-          exit 1
-        }
+    - name: Remove debug symbols
+      run: |
+        del publish\*.pdb -ErrorAction SilentlyContinue
 
-        echo "Found EXE: $($exe.FullName)"
-        echo "exe_path=$($exe.FullName)" >> $env:GITHUB_OUTPUT
-
-    # 📦 Загрузить только найденный exe
-    - name: Upload EXE only
+    - name: Upload Portable Build
       uses: actions/upload-artifact@v4
       with:
-        name: Lively-EXE
-        path: ${{ steps.find_exe.outputs.exe_path }}
+        name: Lively-Portable
+        path: publish/
