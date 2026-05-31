@@ -34,11 +34,10 @@ jobs:
         mkdir publish
         xcopy src\Lively\Lively\bin\x64\Release\net9.0-windows* publish\ /E /I /Y
 
-    # ✅ Удаляем debug мусор
-    - name: Remove debug symbols
-      run: |
-        del publish\*.pdb /S /Q
-
+  - name: Remove debug symbols
+    shell: pwsh
+    run: |
+      Get-ChildItem publish -Recurse -Filter *.pdb | Remove-Item -Force
     - name: Upload full portable build
       uses: actions/upload-artifact@v4
       with:
