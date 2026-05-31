@@ -21,10 +21,10 @@ jobs:
         dotnet-version: 8.0.x
 
     - name: Restore NuGet
-      run: nuget restore Lively.sln
+      run: nuget restore src/Lively.sln
 
     - name: Build
-      run: msbuild Lively.sln /p:Configuration=Release /p:Platform=x64
+      run: msbuild src/Lively.sln /p:Configuration=Release /p:Platform=x64
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
