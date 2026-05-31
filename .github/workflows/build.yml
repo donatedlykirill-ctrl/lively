@@ -1,4 +1,4 @@
-name: Build Official Lively Portable
+name: Build Lively Portable
 
 on:
   workflow_dispatch:
@@ -11,36 +11,41 @@ jobs:
     runs-on: windows-2025
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
+    - uses: microsoft/setup-msbuild@v2
 
-    - name: Setup NuGet
-      uses: NuGet/setup-nuget@v2
+    - uses: NuGet/setup-nuget@v2
 
     - name: Restore
       run: nuget restore src/Lively/Lively.sln
 
-    - name: Publish Solution
+    - name: Build
+      run: msbuild src/Lively/Lively.sln /p:Configuration=Release /p:Platform=x64 /m
+
+    - name: Copy full build output
+      shell: pwsh
       run: |
-        msbuild src/Lively/Lively.sln `
-          /t:Publish `
-          /p:Configuration=Release `
-          /p:Platform=x64 `
-          /p:PublishDir=publish\ `
-          /m
+        $root = "src/Lively/Lively/bin/x64/Release"
+        $folder = Get-ChildItem $root -Directory |
+                  Where-Object { $_.Name -like "net*-windows*" } |
+                  Select-Object -First 1
+
+        if (-not $folder) {
+          Write-Error "Build output folder not found!"
+          exit 1
+        }
+
+        Copy-Item "$($folder.FullName)" publish -Recurse -Force
 
     - name: Remove debug symbols
       shell: pwsh
       run: |
         Get-ChildItem publish -Recurse -Filter *.pdb | Remove-Item -Force
 
-    - name: Upload Portable Build
-      uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v4
       with:
         name: Lively-Portable
         path: publish/
