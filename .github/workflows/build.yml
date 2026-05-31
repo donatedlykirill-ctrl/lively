@@ -1,4 +1,4 @@
-name: Build Lively
+name: Build Lively EXE
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ jobs:
     runs-on: windows-2025
 
     steps:
-    - name: Checkout
+    - name: Checkout repository
       uses: actions/checkout@v4
       with:
         submodules: recursive
@@ -22,14 +22,32 @@ jobs:
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v2
 
-    - name: Restore
+    - name: Restore NuGet packages
       run: nuget restore src/Lively/Lively.sln
 
-    - name: Build
+    - name: Build Solution
       run: msbuild src/Lively/Lively.sln /p:Configuration=Release /p:Platform=x64 /m
 
+    # 🔎 Найти exe автоматически
+    - name: Find EXE
+      id: find_exe
+      shell: pwsh
+      run: |
+        $exe = Get-ChildItem -Recurse -Filter *.exe | 
+               Where-Object { $_.FullName -match "Release" } |
+               Select-Object -First 1
+
+        if (-not $exe) {
+          Write-Error "EXE not found!"
+          exit 1
+        }
+
+        echo "Found EXE: $($exe.FullName)"
+        echo "exe_path=$($exe.FullName)" >> $env:GITHUB_OUTPUT
+
+    # 📦 Загрузить только найденный exe
     - name: Upload EXE only
       uses: actions/upload-artifact@v4
       with:
         name: Lively-EXE
-        path: src/Lively/bin/x64/Release/Lively.exe
+        path: ${{ steps.find_exe.outputs.exe_path }}
